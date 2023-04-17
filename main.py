@@ -39,7 +39,13 @@ def reply_handler(update: Update, context: CallbackContext):
 
     if text[0] == "/":
         if text[1:6] == "tarot":
-            update.message.reply_text(ask())
+            # update.message.reply_text(ask())
+            pass
+        elif text[1:5] == "test":
+            update.message.reply_text(
+                ask("人生", ["正位", "錢幣國王"], ["正位", "錢幣皇后"], ["正位", "錢幣騎士"])
+            )
+
     else:
         update.message.reply_text("Command undefined")
 
