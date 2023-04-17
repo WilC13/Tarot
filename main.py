@@ -4,7 +4,7 @@ import openai, configparser, logging
 from flask import Flask, request, Response
 from telegram import Bot, InlineKeyboardMarkup, InlineKeyboardButton, Update
 from telegram.ext import Dispatcher, MessageHandler, Filters, CallbackContext
-import random, requests
+import random
 
 config = configparser.ConfigParser()
 config.read("config.ini")
@@ -68,16 +68,17 @@ def reply_handler(update: Update, context: CallbackContext):
         elif text[1:7] == "future":
             temp[chat_id].future()
             update.message.reply_text(
-                f"{random.choice(ran_context)} 然後以 /open 等待AI占卜結果"
+                f"代表過去的牌:{temp[chat_id].table[0][0]} {temp[chat_id].table[0][1]}\n代表現在的牌:{temp[chat_id].table[1][0]} {temp[chat_id].table[1][1]}\n代表未來的牌:{temp[chat_id].table[2][0]} {temp[chat_id].table[2][1]}\n 以 /open 等待AI占卜結果"
             )
         elif text[1:5] == "open":
-            send(
+            update.message.reply_text(
                 id=chat_id,
-                text=f"代表過去的牌:{temp[chat_id][0][0]} {temp[chat_id][0][1]}\n代表現在的牌:{temp[chat_id][1][0]} {temp[chat_id][1][1]}\n代表未來的牌:{temp[chat_id][2][0]} {temp[chat_id][2][1]}\n",
-            )
-            send(
-                id=chat_id,
-                text=ask("人生", temp[chat_id][0], temp[chat_id][1], temp[chat_id][2]),
+                text=ask(
+                    "人生",
+                    temp[chat_id].table[0],
+                    temp[chat_id].table[1],
+                    temp[chat_id].table[2],
+                ),
             )
         elif text[1:5] == "test":
             update.message.reply_text(
@@ -108,13 +109,13 @@ def ask(area: str, past: list, now: list, future: list) -> str:
     return completed_text
 
 
-def send(id, text):
-    url = f"https://api.telegram.org/bot{API_KEY}/sendMessage"
-    params = {
-        "chat_id": id,
-        "text": f"{text}",
-    }
-    resp = requests.get(url, params=params)
+# def send(id, text):
+#     url = f"https://api.telegram.org/bot{API_KEY}/sendMessage"
+#     params = {
+#         "chat_id": id,
+#         "text": f"{text}",
+#     }
+#     resp = requests.get(url, params=params)
 
 
 dispatcher.add_handler(MessageHandler(Filters.text, reply_handler))
