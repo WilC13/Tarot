@@ -3,7 +3,7 @@ from opencc import OpenCC
 import openai, configparser, logging
 from flask import Flask, request, Response
 from telegram import Bot, InlineKeyboardMarkup, InlineKeyboardButton, Update
-from telegram.ext import Dispatcher, MessageHandler, Filters, CallbackContext
+from telegram.ext import Dispatcher, MessageHandler, Filters, CallbackContext, Updater
 import random
 
 config = configparser.ConfigParser()
@@ -12,9 +12,7 @@ config.read("config.ini")
 # to traditional chinese
 cc = OpenCC("s2hk")
 
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
-)
+logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +22,7 @@ bot = Bot(API_KEY)
 dispatcher = Dispatcher(bot, None)
 
 app = Flask(__name__)
+
 
 temp = dict()
 
@@ -62,34 +61,31 @@ def reply_handler(update: Update, context: CallbackContext):
             update.message.reply_text(f" /q 占卜範疇\n例如: /q 健康")
         if text[1:2] == "q":
             area = text[3:]
-            update.message.reply_text(
-                f"{random.choice(ran_context)} 然後以 /past 抽出代表過去的牌"
-            )
+            logging.info(f"area: {area}")
+            update.message.reply_text(f"{random.choice(ran_context)}\n然後以 /past 抽出代表過去的牌")
         elif text[1:5] == "past":
             temp[chat_id].past()
-            update.message.reply_text(f"{random.choice(ran_context)} 然後以 /now 抽出代表現在的牌")
+            update.message.reply_text(f"{random.choice(ran_context)}\n然後以 /now 抽出代表現在的牌")
         elif text[1:4] == "now":
             temp[chat_id].now()
-            update.message.reply_text(
-                f"{random.choice(ran_context)} 然後以 /future 抽出代表未來的牌"
-            )
+            update.message.reply_text(f"{random.choice(ran_context)}\n然後以 /future 抽出代表未來的牌")
         elif text[1:7] == "future":
             temp[chat_id].future()
             update.message.reply_text(
                 f"代表過去的牌:{temp[chat_id].table[0][0]} {temp[chat_id].table[0][1]}\n代表現在的牌:{temp[chat_id].table[1][0]} {temp[chat_id].table[1][1]}\n代表未來的牌:{temp[chat_id].table[2][0]} {temp[chat_id].table[2][1]}\n 以 /open 等待AI占卜結果"
             )
+        elif text[1:5] == "open":
             re = ask(
                 area,
                 temp[chat_id].table[0],
                 temp[chat_id].table[1],
                 temp[chat_id].table[2],
             )
-        elif text[1:5] == "open":
+            logger.info(f"response: {re}")
             update.message.reply_text(re)
+
         elif text[1:5] == "test":
-            update.message.reply_text(
-                ask("人生", ["正位", "錢幣國王"], ["正位", "錢幣皇后"], ["正位", "錢幣騎士"])
-            )
+            update.message.reply_text(ask("人生", ["正位", "錢幣國王"], ["正位", "錢幣皇后"], ["正位", "錢幣騎士"]))
 
     else:
         update.message.reply_text("Command undefined")
@@ -102,7 +98,7 @@ def error(update, context):
 
 def ask(area: str, past: list, now: list, future: list) -> str:
     tarot_prompt = f"""
-    假設你現在是一位塔羅牌占卜師，我已經抽了三張牌，分別代表過去，現在和未來，而我想作出關於{area}的占卜，其中代表過去的牌是{past[0]}的{past[1]}，代表現在的牌是{now[0]}的{now[1]}，代表未的牌是{future[0]}的{future[1]}，請告訴我這三張牌分別是什麼意思，以及三張牌組合起來又是甚麼意思？"""
+    假設你現在是一位塔羅牌占卜師，我已經抽了三張牌，分別代表過去，現在和未來，而我想作出關於{area}的占卜，其中代表過去的牌是{past[0]}的{past[1]}，代表現在的牌是{now[0]}的{now[1]}，代表未來的牌是{future[0]}的{future[1]}，請告訴我這三張牌分別是什麼意思，以及三張牌組合起來又是甚麼意思？"""
     logging.info(f"prompt: {tarot_prompt}")
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
@@ -124,9 +120,13 @@ def ask(area: str, past: list, now: list, future: list) -> str:
 #     resp = requests.get(url, params=params)
 
 
-dispatcher.add_handler(MessageHandler(Filters.text, reply_handler))
-dispatcher.add_error_handler(error)
-
-
 if __name__ == "__main__":
+    dispatcher.add_handler(MessageHandler(Filters.text, reply_handler))
+    dispatcher.add_error_handler(error)
     app.run(debug=True)
+    # print("Bot started...")
+    # updater = Updater(API_KEY, use_context=True)
+    # dp = updater.dispatcher
+    # dp.add_handler(MessageHandler(Filters.text, reply_handler))
+    # updater.start_polling()
+    # updater.idle()
