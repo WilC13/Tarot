@@ -51,12 +51,19 @@ def reply_handler(update: Update, context: CallbackContext):
     user = update.message.from_user
     chat_id = user["id"]
 
+    area = "健康"
+
     if text[0] == "/":
         if text[1:6] == "tarot":
             # init deck
             temp[chat_id] = deck()
             temp[chat_id].shuffle()
-            update.message.reply_text(f"{random.choice(ran_context)} 以 /past 抽出代表過去的牌")
+            update.message.reply_text(f" /q 占卜範疇\n例如: /q 健康")
+        if text[1:2] == "q":
+            area = text[4:]
+            update.message.reply_text(
+                f"{random.choice(ran_context)} 然後以 /past 抽出代表過去的牌"
+            )
         elif text[1:5] == "past":
             temp[chat_id].past()
             update.message.reply_text(f"{random.choice(ran_context)} 然後以 /now 抽出代表現在的牌")
@@ -72,13 +79,12 @@ def reply_handler(update: Update, context: CallbackContext):
             )
         elif text[1:5] == "open":
             update.message.reply_text(
-                id=chat_id,
-                text=ask(
-                    "人生",
+                ask(
+                    area,
                     temp[chat_id].table[0],
                     temp[chat_id].table[1],
                     temp[chat_id].table[2],
-                ),
+                )
             )
         elif text[1:5] == "test":
             update.message.reply_text(
