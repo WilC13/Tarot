@@ -52,6 +52,7 @@ def reply_handler(update: Update, context: CallbackContext):
     chat_id = user["id"]
 
     area = "健康"
+    re = None
 
     if text[0] == "/":
         if text[1:6] == "tarot":
@@ -60,7 +61,7 @@ def reply_handler(update: Update, context: CallbackContext):
             temp[chat_id].shuffle()
             update.message.reply_text(f" /q 占卜範疇\n例如: /q 健康")
         if text[1:2] == "q":
-            area = text[4:]
+            area = text[3:]
             update.message.reply_text(
                 f"{random.choice(ran_context)} 然後以 /past 抽出代表過去的牌"
             )
@@ -77,15 +78,14 @@ def reply_handler(update: Update, context: CallbackContext):
             update.message.reply_text(
                 f"代表過去的牌:{temp[chat_id].table[0][0]} {temp[chat_id].table[0][1]}\n代表現在的牌:{temp[chat_id].table[1][0]} {temp[chat_id].table[1][1]}\n代表未來的牌:{temp[chat_id].table[2][0]} {temp[chat_id].table[2][1]}\n 以 /open 等待AI占卜結果"
             )
-        elif text[1:5] == "open":
-            update.message.reply_text(
-                ask(
-                    area,
-                    temp[chat_id].table[0],
-                    temp[chat_id].table[1],
-                    temp[chat_id].table[2],
-                )
+            re = ask(
+                area,
+                temp[chat_id].table[0],
+                temp[chat_id].table[1],
+                temp[chat_id].table[2],
             )
+        elif text[1:5] == "open":
+            update.message.reply_text(re)
         elif text[1:5] == "test":
             update.message.reply_text(
                 ask("人生", ["正位", "錢幣國王"], ["正位", "錢幣皇后"], ["正位", "錢幣騎士"])
@@ -102,7 +102,7 @@ def error(update, context):
 
 def ask(area: str, past: list, now: list, future: list) -> str:
     tarot_prompt = f"""
-    假設你現在是一位塔羅牌占卜師，我已經抽了三張牌，分別代表過去，現在和未來，而我想作出關於{area}的占卜，其中代表過去的牌是{past[0]}的{past[1]}，代表現在的牌是{now[0]}的{now[1]}，代表未的牌是{future[0]}的{future[1]}，請告訴我這三張牌分別是什麼意思，以及三張牌組合起來又是甚麼意思"""
+    假設你現在是一位塔羅牌占卜師，我已經抽了三張牌，分別代表過去，現在和未來，而我想作出關於{area}的占卜，其中代表過去的牌是{past[0]}的{past[1]}，代表現在的牌是{now[0]}的{now[1]}，代表未的牌是{future[0]}的{future[1]}，請告訴我這三張牌分別是什麼意思，以及三張牌組合起來又是甚麼意思？"""
     logging.info(f"prompt: {tarot_prompt}")
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
