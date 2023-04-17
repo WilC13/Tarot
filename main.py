@@ -119,10 +119,10 @@ def ask(area: str, past: list, now: list, future: list) -> str:
 #     }
 #     resp = requests.get(url, params=params)
 
+dispatcher.add_handler(MessageHandler(Filters.text, reply_handler))
+dispatcher.add_error_handler(error)
 
 if __name__ == "__main__":
-    dispatcher.add_handler(MessageHandler(Filters.text, reply_handler))
-    dispatcher.add_error_handler(error)
     app.run(debug=True)
     # print("Bot started...")
     # updater = Updater(API_KEY, use_context=True)
