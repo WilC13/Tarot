@@ -4,6 +4,7 @@ import openai, configparser, logging
 from flask import Flask, request, Response
 from telegram import Bot, InlineKeyboardMarkup, InlineKeyboardButton, Update
 from telegram.ext import Dispatcher, MessageHandler, Filters, CallbackContext
+import random
 
 config = configparser.ConfigParser()
 config.read("config.ini")
@@ -24,6 +25,8 @@ dispatcher = Dispatcher(bot, None)
 
 app = Flask(__name__)
 
+temp = dict()
+
 
 @app.route("/hook", methods=["POST"])
 def webhook_handler():
@@ -34,13 +37,47 @@ def webhook_handler():
 
 
 def reply_handler(update: Update, context: CallbackContext):
+    global temp
     text = update.message.text
-    # update.message.reply_text("Processing")
+
+    ran_context = [
+        "開始抽牌前，集中精神想一想你現在需要指引的問題，或是現正困擾你的生活狀況。你的精神愈集中，塔羅牌便能越有效的從你的心裡指引出清晰的道路。",
+        "深呼吸一口氣，放鬆一下身體和心靈，協助內心清除雜念及放空自己，完全地靜下心來。如果你在一個嘈雜的環境的話，嘗試轉換到一個寧靜的環境，或是改變一個舒適的姿勢。",
+        "請誠實接受塔羅牌給你的信息和指引，即使有些信息看來與你的想法大相徑庭，或許，這就是你需要的新角度。我們準備的解釋不一定完美反映你的狀況，卡牌的意思可能會帶給你不同的感覺，請嘗試把信息按你的感覺套用到你的生活中。",
+        "塔羅牌的結果不是絕對，塔羅只能協助你看見事情的癥結，並給出一個指引。或者有些卡牌看似十分絕望，但不要害怕，卡牌只是反映最近的狀況，而且卡牌總會有正向的一面。",
+        "絕對不要同一天反覆進行占卜，嘗試接受占卜得出的第一個結果吧！不停的占卜並不會為你帶來更清晰的指引，相反地，這樣做將只會令你更感迷惑。",
+    ]
+
+    chat_id = update.callback_query.message.chat_id
 
     if text[0] == "/":
         if text[1:6] == "tarot":
-            # update.message.reply_text(ask())
-            pass
+            # init deck
+            temp[chat_id] = deck()
+            temp[chat_id].shuffle()
+            update.message.reply_text(f"{random.choice(ran_context)} 以 /past 抽出代表過去的牌")
+        elif text[1:5] == "past":
+            temp[chat_id].past()
+            update.message.reply_text(f"{random.choice(ran_context)} 然後以 /now 抽出代表現在的牌")
+        elif text[1:4] == "now":
+            temp[chat_id].now()
+            update.message.reply_text(
+                f"{random.choice(ran_context)} 然後以 /future 抽出代表未來的牌"
+            )
+        elif text[1:7] == "future":
+            temp[chat_id].future()
+            update.message.reply_text(
+                f"{random.choice(ran_context)} 然後以 /open 等待AI占卜結果"
+            )
+        elif text[1:5] == "open":
+            text.bot.send_message(
+                chat_id=chat_id,
+                text=f"代表過去的牌:{temp[chat_id][0][0]} {temp[chat_id][0][1]}\n代表現在的牌:{temp[chat_id][1][0]} {temp[chat_id][1][1]}\n代表未來的牌:{temp[chat_id][2][0]} {temp[chat_id][2][1]}\n",
+            )
+            text.bot.send_message(
+                chat_id=chat_id,
+                text=ask("人生", temp[chat_id][0], temp[chat_id][1], temp[chat_id][2]),
+            )
         elif text[1:5] == "test":
             update.message.reply_text(
                 ask("人生", ["正位", "錢幣國王"], ["正位", "錢幣皇后"], ["正位", "錢幣騎士"])
