@@ -1,6 +1,6 @@
 from cards.tarot import deck
 from opencc import OpenCC
-import openai, configparser, logging, asyncio
+import openai, logging, asyncio
 from flask import Flask, request, make_response
 from telegram import Bot, InlineKeyboardMarkup, InlineKeyboardButton, Update
 from telegram.ext import (
@@ -10,9 +10,6 @@ from telegram.ext import (
     CallbackContext,
     CommandHandler,
 )
-
-config = configparser.ConfigParser()
-config.read("config.ini")
 
 # to traditional chinese
 cc = OpenCC("s2hk")
