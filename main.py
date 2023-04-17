@@ -4,7 +4,7 @@ import openai, configparser, logging
 from flask import Flask, request, Response
 from telegram import Bot, InlineKeyboardMarkup, InlineKeyboardButton, Update
 from telegram.ext import Dispatcher, MessageHandler, Filters, CallbackContext
-import random
+import random, requests
 
 config = configparser.ConfigParser()
 config.read("config.ini")
@@ -19,8 +19,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 openai.api_key = config["OPENAI"]["ACCESS_TOKEN"]
-bot = Bot(config["TELEGRAM"]["ACCESS_TOKEN"])
-
+API_KEY = config["TELEGRAM"]["ACCESS_TOKEN"]
+bot = Bot(API_KEY)
 dispatcher = Dispatcher(bot, None)
 
 app = Flask(__name__)
@@ -48,7 +48,8 @@ def reply_handler(update: Update, context: CallbackContext):
         "絕對不要同一天反覆進行占卜，嘗試接受占卜得出的第一個結果吧！不停的占卜並不會為你帶來更清晰的指引，相反地，這樣做將只會令你更感迷惑。",
     ]
 
-    chat_id = update.callback_query.message.chat_id
+    user = update.message.from_user
+    chat_id = user["id"]
 
     if text[0] == "/":
         if text[1:6] == "tarot":
@@ -70,12 +71,12 @@ def reply_handler(update: Update, context: CallbackContext):
                 f"{random.choice(ran_context)} 然後以 /open 等待AI占卜結果"
             )
         elif text[1:5] == "open":
-            text.bot.send_message(
-                chat_id=chat_id,
+            send(
+                id=chat_id,
                 text=f"代表過去的牌:{temp[chat_id][0][0]} {temp[chat_id][0][1]}\n代表現在的牌:{temp[chat_id][1][0]} {temp[chat_id][1][1]}\n代表未來的牌:{temp[chat_id][2][0]} {temp[chat_id][2][1]}\n",
             )
-            text.bot.send_message(
-                chat_id=chat_id,
+            send(
+                id=chat_id,
                 text=ask("人生", temp[chat_id][0], temp[chat_id][1], temp[chat_id][2]),
             )
         elif text[1:5] == "test":
@@ -105,6 +106,15 @@ def ask(area: str, past: list, now: list, future: list) -> str:
     completed_text = cc.convert(response["choices"][0]["message"]["content"])
     logging.info(f"Res: {completed_text}")
     return completed_text
+
+
+def send(id, text):
+    url = f"https://api.telegram.org/bot{API_KEY}/sendMessage"
+    params = {
+        "chat_id": id,
+        "text": f"{text}",
+    }
+    resp = requests.get(url, params=params)
 
 
 dispatcher.add_handler(MessageHandler(Filters.text, reply_handler))
