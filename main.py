@@ -1,15 +1,12 @@
 from cards.tarot import deck
 from opencc import OpenCC
-import openai, logging, asyncio
-from flask import Flask, request, make_response
+import openai, configparser, logging
+from flask import Flask, request, Response
 from telegram import Bot, InlineKeyboardMarkup, InlineKeyboardButton, Update
-from telegram.ext import (
-    Dispatcher,
-    MessageHandler,
-    Filters,
-    CallbackContext,
-    CommandHandler,
-)
+from telegram.ext import Dispatcher, MessageHandler, Filters, CallbackContext
+
+config = configparser.ConfigParser()
+config.read("config.ini")
 
 # to traditional chinese
 cc = OpenCC("s2hk")
@@ -29,30 +26,27 @@ app = Flask(__name__)
 
 
 @app.route("/hook", methods=["POST"])
-async def webhook_handler():
+def webhook_handler():
     if request.method == "POST":
         update = Update.de_json(request.get_json(force=True), bot)
-
-        response = make_response("This is a HTTP 200 OK response.", 200)
-        await dispatcher.process_update(update)
-
-    return response
+        dispatcher.process_update(update)
+        return Response("ok", status=200)
 
 
-# def reply_handler(update: Update, context: CallbackContext):
-#     text = update.message.text
-#     # update.message.reply_text("Processing")
-
-
-#     user = update.message.from_user
-#     user_id = user["id"]
-async def tarot_gpt(update: Update, context: CallbackContext):
+def reply_handler(update: Update, context: CallbackContext):
     text = update.message.text
     # update.message.reply_text("Processing")
 
-    await update.message.reply_text(
-        ask("人生", [["正位"], ["錢幣國王"]], [["逆位"], ["錢幣皇后"]], [["逆位"], ["錢幣騎士"]])
-    )
+    if text[0] == "/":
+        if text[1:6] == "tarot":
+            update.message.reply_text(ask())
+    else:
+        update.message.reply_text("Command undefined")
+
+
+def error(update, context):
+    logging.info(f"Update {update} caused error {context.error}")
+    update.message.reply_text("Something wrong, please try again later")
 
 
 def ask(area: str, past: list, now: list, future: list) -> str:
@@ -70,10 +64,9 @@ def ask(area: str, past: list, now: list, future: list) -> str:
     return completed_text
 
 
-async def main():
-    dispatcher.add_handler(CommandHandler("tarot", tarot_gpt))
-    app.run(debug=True)
+dispatcher.add_handler(MessageHandler(Filters.text, reply_handler))
+dispatcher.add_error_handler(error)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    app.run(debug=True)
