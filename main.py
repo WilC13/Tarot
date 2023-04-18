@@ -25,6 +25,7 @@ app = Flask(__name__)
 
 
 temp = dict()
+area = "健康"
 
 
 @app.route("/hook", methods=["POST"])
@@ -36,7 +37,7 @@ def webhook_handler():
 
 
 def reply_handler(update: Update, context: CallbackContext):
-    global temp
+    global temp, area
     text = update.message.text
 
     ran_context = [
@@ -50,7 +51,6 @@ def reply_handler(update: Update, context: CallbackContext):
     user = update.message.from_user
     chat_id = user["id"]
 
-    area = "健康"
     re = None
 
     if text[0] == "/":
